@@ -1,0 +1,107 @@
+name: logo
+description: Retouch logos — remove backgrounds, recolor, resize, pad, and batch-process logo images using sharp
+version: 1.0.0
+category: design
+author: cnrai
+
+commands:
+  remove-bg:
+    description: Remove white/light background and make it transparent
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: output
+        description: Output file path (default: adds -transparent suffix)
+        required: false
+      - name: threshold
+        description: Whiteness threshold 0-255 (default: 230). Higher = more aggressive
+        required: false
+
+  to-white:
+    description: Recolor all visible pixels to white (for dark backgrounds)
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: output
+        description: Output file path (default: adds -white suffix)
+        required: false
+
+  to-black:
+    description: Recolor all visible pixels to black (for light backgrounds)
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: output
+        description: Output file path (default: adds -black suffix)
+        required: false
+
+  to-color:
+    description: Recolor all visible pixels to a specific color
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: color
+        description: "Hex color code (e.g. #FF5500 or FF5500)"
+        required: true
+      - name: output
+        description: Output file path (default: adds -recolored suffix)
+        required: false
+
+  resize:
+    description: Resize a logo to specific dimensions or scale factor
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: width
+        description: Target width in pixels
+        required: false
+      - name: height
+        description: Target height in pixels
+        required: false
+      - name: scale
+        description: "Scale factor (e.g. 0.5 for half, 2 for double)"
+        required: false
+      - name: output
+        description: Output file path (default: adds -resized suffix)
+        required: false
+
+  pad:
+    description: Add transparent padding around a logo
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: padding
+        description: "Padding in pixels (single number for all sides, or top,right,bottom,left)"
+        required: true
+      - name: color
+        description: "Padding color as hex (default: transparent)"
+        required: false
+      - name: output
+        description: Output file path (default: adds -padded suffix)
+        required: false
+
+  info:
+    description: Show image metadata — dimensions, format, channels, file size, has alpha
+    parameters:
+      - name: input
+        description: Path to the image file
+        required: true
+
+  batch:
+    description: Run multiple operations on a logo in sequence and output all variants
+    parameters:
+      - name: input
+        description: Path to the input image file
+        required: true
+      - name: output-dir
+        description: Directory to write output files (default: same directory as input)
+        required: false
+      - name: operations
+        description: "Comma-separated operations: remove-bg,to-white,to-black,resize:WIDTH"
+        required: true

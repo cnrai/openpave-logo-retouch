@@ -1,0 +1,9 @@
+{
+  "name": "openpave-logo-retouch",
+  "version": "1.0.0",
+  "description": "PAVE skill to retouch logos — remove backgrounds, recolor, resize, pad, and batch-process",
+  "main": "index.js",
+  "dependencies": {
+    "sharp": "^0.33.0"
+  }
+}
