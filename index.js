@@ -84,6 +84,50 @@ function recolorBuffer(srcData, r, g, b) {
   return { data, recolored };
 }
 
+/**
+ * Recolor with alpha preservation — maps the original pixel's darkness
+ * into the alpha channel so anti-aliased edges stay smooth.
+ *
+ * For "to-white --preserve-alpha": dark pixels → white with high alpha,
+ * light pixels → white with low alpha (fades out toward the background).
+ *
+ * For "to-black --preserve-alpha": light pixels → black with high alpha,
+ * dark pixels → black with low alpha.
+ *
+ * The `invert` flag controls the direction:
+ *   false (default) = dark-is-opaque (for recoloring to white/light colors)
+ *   true            = light-is-opaque (for recoloring to black/dark colors)
+ */
+function recolorPreserveAlpha(srcData, r, g, b, invert = false) {
+  const data = Buffer.from(srcData);
+  let recolored = 0;
+  for (let i = 0; i < data.length; i += 4) {
+    const a = data[i + 3];
+    if (a === 0) continue;
+
+    // Perceived luminance (Rec. 709)
+    const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+
+    // Map luminance to alpha: 0 (black) → 255 alpha, 255 (white) → 0 alpha
+    // Then combine with existing alpha
+    let newAlpha;
+    if (invert) {
+      // Light-is-opaque: white pixels are most visible
+      newAlpha = Math.round((lum / 255) * a);
+    } else {
+      // Dark-is-opaque: dark pixels are most visible (default for to-white)
+      newAlpha = Math.round(((255 - lum) / 255) * a);
+    }
+
+    data[i] = r;
+    data[i + 1] = g;
+    data[i + 2] = b;
+    data[i + 3] = Math.min(255, Math.max(0, newAlpha));
+    recolored++;
+  }
+  return { data, recolored };
+}
+
 // ---------------------------------------------------------------------------
 // Command handlers
 // ---------------------------------------------------------------------------
@@ -104,27 +148,34 @@ async function cmdRemoveBg(args) {
 
 async function cmdToWhite(args) {
   const input = args.input;
-  const output = outputPath(input, "white", args.output);
+  const preserveAlpha = args["preserve-alpha"] === "true" || args["preserve-alpha"] === true;
+  const suffix = preserveAlpha ? "white-smooth" : "white";
+  const output = outputPath(input, suffix, args.output);
 
-  // If input has no alpha, remove bg first
   const { data: srcData, info } = await readRaw(input);
-  const { data, recolored } = recolorBuffer(srcData, 255, 255, 255);
+  const { data, recolored } = preserveAlpha
+    ? recolorPreserveAlpha(srcData, 255, 255, 255, false)
+    : recolorBuffer(srcData, 255, 255, 255);
   await writeRaw(data, info, output);
 
-  return `Recolored ${path.basename(input)} to white\n` +
+  return `Recolored ${path.basename(input)} to white${preserveAlpha ? " (smooth edges)" : ""}\n` +
     `  ${recolored.toLocaleString()} pixels recolored\n` +
     `  Output: ${output}`;
 }
 
 async function cmdToBlack(args) {
   const input = args.input;
-  const output = outputPath(input, "black", args.output);
+  const preserveAlpha = args["preserve-alpha"] === "true" || args["preserve-alpha"] === true;
+  const suffix = preserveAlpha ? "black-smooth" : "black";
+  const output = outputPath(input, suffix, args.output);
 
   const { data: srcData, info } = await readRaw(input);
-  const { data, recolored } = recolorBuffer(srcData, 0, 0, 0);
+  const { data, recolored } = preserveAlpha
+    ? recolorPreserveAlpha(srcData, 0, 0, 0, true)
+    : recolorBuffer(srcData, 0, 0, 0);
   await writeRaw(data, info, output);
 
-  return `Recolored ${path.basename(input)} to black\n` +
+  return `Recolored ${path.basename(input)} to black${preserveAlpha ? " (smooth edges)" : ""}\n` +
     `  ${recolored.toLocaleString()} pixels recolored\n` +
     `  Output: ${output}`;
 }
@@ -133,13 +184,20 @@ async function cmdToColor(args) {
   const input = args.input;
   const { r, g, b } = parseHex(args.color);
   const colorLabel = args.color.replace(/^#/, "").toUpperCase();
-  const output = outputPath(input, `recolored-${colorLabel}`, args.output);
+  const preserveAlpha = args["preserve-alpha"] === "true" || args["preserve-alpha"] === true;
+  const suffix = preserveAlpha ? `recolored-${colorLabel}-smooth` : `recolored-${colorLabel}`;
+  const output = outputPath(input, suffix, args.output);
 
   const { data: srcData, info } = await readRaw(input);
-  const { data, recolored } = recolorBuffer(srcData, r, g, b);
+  // For to-color with preserve-alpha, auto-detect direction:
+  // if target color is light (lum > 128), use dark-is-opaque; otherwise light-is-opaque
+  const targetLum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  const { data, recolored } = preserveAlpha
+    ? recolorPreserveAlpha(srcData, r, g, b, targetLum < 128)
+    : recolorBuffer(srcData, r, g, b);
   await writeRaw(data, info, output);
 
-  return `Recolored ${path.basename(input)} to #${colorLabel}\n` +
+  return `Recolored ${path.basename(input)} to #${colorLabel}${preserveAlpha ? " (smooth edges)" : ""}\n` +
     `  ${recolored.toLocaleString()} pixels recolored\n` +
     `  Output: ${output}`;
 }

@@ -27,6 +27,9 @@ commands:
       - name: output
         description: Output file path (default: adds -white suffix)
         required: false
+      - name: preserve-alpha
+        description: Map original brightness to alpha for smooth anti-aliased edges
+        required: false
 
   to-black:
     description: Recolor all visible pixels to black (for light backgrounds)
@@ -36,6 +39,9 @@ commands:
         required: true
       - name: output
         description: Output file path (default: adds -black suffix)
+        required: false
+      - name: preserve-alpha
+        description: Map original brightness to alpha for smooth anti-aliased edges
         required: false
 
   to-color:
@@ -49,6 +55,9 @@ commands:
         required: true
       - name: output
         description: Output file path (default: adds -recolored suffix)
+        required: false
+      - name: preserve-alpha
+        description: Map original brightness to alpha for smooth anti-aliased edges
         required: false
 
   resize:
